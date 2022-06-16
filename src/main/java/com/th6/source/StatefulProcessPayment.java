@@ -25,27 +25,29 @@ public class StatefulProcessPayment extends KeyedProcessFunction<Tuple2<Integer,
 
     private transient ValueState<PaymentTotal> state;
     
+    @Override
+    public void open(Configuration parameters) {
+        state = getRuntimeContext().getState(
+                new ValueStateDescriptor<>("myState", PaymentTotal.class));
+
+    }
 
     @Override
     public void processElement(OrderPayment orderPayment, KeyedProcessFunction<Tuple2<Integer, Integer>, OrderPayment, CustomerPayment>.Context context, Collector<CustomerPayment> out) throws Exception {
-        PaymentTotal paymentTotal = null;
-        if (state == null) {
-            paymentTotal = new PaymentTotal();
-        } else {
-            paymentTotal = state.value();
-        }
-        /*PaymentTotal paymentTotal = state.value();
+        PaymentTotal paymentTotal = state.value();
         if (paymentTotal == null) {
             paymentTotal = new PaymentTotal();
-        }*/
-
+        }
+        
         paymentTotal.totalAmount += orderPayment.TOTALAMOUNT;
         paymentTotal.useTime++;
-
-        //state.update(paymentTotal);
+        
+        state.update(paymentTotal);
 
         out.collect(new CustomerPayment(orderPayment.CUSTOMERID, orderPayment.BRANDID,
                 orderPayment.PAYABLETYPE, orderPayment.TRANSACTIONTYPEID,
                 paymentTotal.useTime, paymentTotal.totalAmount));
     }
+
+    
 }
