@@ -62,25 +62,34 @@ public class ProcessSinkOrderPayment extends ProcessWindowFunction<OrderPayment,
             ProcessWindowFunction<OrderPayment, CustomerPayment, Tuple2<Integer, Integer>, TimeWindow>.Context context,
             Iterable<OrderPayment> items,
             Collector<CustomerPayment> collector) throws Exception {
-
-        System.out.println("key.f0");
-        System.out.println(key.f0);
+        
+        // Value state of PaymentTotal
         Tuple2<Integer, Float> currentSum = sum.value();
+        
+        // Change value of CustomerPayment
         for (Map.Entry<Tuple2<Integer, Integer>, HazelcastJsonValue> entry : map.entrySet()) {
             Tuple2 keyEntry = entry.getKey();
             if (keyEntry.equals(key)
                     && currentSum.f0 == 0) {
+                
+                // Get vavlue from Hazelcast
                 HazelcastJsonValue jsonString = entry.getValue();
                 ObjectMapper mapper = new ObjectMapper();
+                
+                // Convert values from Hazelcast to CustomerPayment to change them
                 CustomerPayment customerPayment = mapper.readValue(jsonString.toString(), CustomerPayment.class);
                 currentSum.f0 = customerPayment.USETIME;
                 currentSum.f1 = customerPayment.TOTALAMOUNT;
             }
         }
 
+        // Increase payTime by 1
         currentSum.f0++;
 
+        // Get all order payments
         ArrayList<OrderPayment> orderPayments = Lists.newArrayList(items);
+        
+        // Add totalamount to total amount from order payments
         for (OrderPayment orderPayment : orderPayments) {
             try {
                 currentSum.f1 += orderPayment.TOTALAMOUNT;
@@ -88,9 +97,11 @@ public class ProcessSinkOrderPayment extends ProcessWindowFunction<OrderPayment,
                 e.printStackTrace();
             }
         }
-
+        
+        // Update Customer payment in value state
         sum.update(currentSum);
-
+        
+        // Create CustomerPayment and write them in Hazelcast
         collector.collect(
                 new CustomerPayment(
                         key.f0,
