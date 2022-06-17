@@ -78,10 +78,8 @@ public class ProcessSinkOrderPayment extends ProcessWindowFunction<OrderPayment,
             }
         }
 
-        // update currentSum.usetime
         currentSum.f0++;
 
-        //update currenSum.totalAmount
         ArrayList<OrderPayment> orderPayments = Lists.newArrayList(items);
         for (OrderPayment orderPayment : orderPayments) {
             try {
@@ -91,7 +89,6 @@ public class ProcessSinkOrderPayment extends ProcessWindowFunction<OrderPayment,
             }
         }
 
-        // update the state
         sum.update(currentSum);
 
         collector.collect(
@@ -117,10 +114,10 @@ public class ProcessSinkOrderPayment extends ProcessWindowFunction<OrderPayment,
         mapperHazel = new ObjectMapper();
         ValueStateDescriptor<Tuple2<Integer, Float>> descriptor
                 = new ValueStateDescriptor<>(
-                        "sum", // the state name
+                        "sum",
                         TypeInformation.of(new TypeHint<Tuple2<Integer, Float>>() {
-                        }), // type information
-                        Tuple2.of(0, 0F)); // default value of the state, if nothing was set
+                        }),
+                        Tuple2.of(0, 0F));
         sum = getRuntimeContext().getState(descriptor);
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.setClusterName("dev");
